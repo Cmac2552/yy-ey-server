@@ -1,0 +1,3 @@
+secrets.go
+*.db
+go.sum
