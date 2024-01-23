@@ -14,8 +14,14 @@ import (
 )
 
 type user struct {
-	Username string `json:"username"`
-	Password string `json:"password"`
+	Username     string `json:"username"`
+	Password     string `json:"password"`
+	Organization string `json:"organization"`
+}
+
+type Item struct {
+	ProductType string `json:"productType"`
+	Descriptors string `json:"descriptors"`
 }
 
 type Handler struct {
@@ -27,6 +33,20 @@ func (h *Handler) restricted(c echo.Context) error {
 	claims := user.Claims.(*jwtCustomClaims)
 	name := claims.Name
 	return c.String(http.StatusOK, "Welcome "+name+"!")
+}
+
+func (h *Handler) addItem(c echo.Context) error {
+	item := new(Item)
+	c.Bind(item)
+	userInfo := c.Get("user").(*jwt.Token).Claims.(*jwtCustomClaims)
+	fmt.Println(item.ProductType, item.Descriptors, userInfo.Organization)
+	_, err := h.DB.Exec("INSERT INTO products (producttype, descriptors, organization) VALUES (?, ?, ?)", item.ProductType, item.Descriptors, userInfo.Organization)
+	if err != nil {
+		fmt.Println(err)
+		return c.JSON(http.StatusInternalServerError, echo.Map{"messsage": "Item Insertion failed"})
+	} else {
+		return c.JSON(http.StatusOK, echo.Map{"message": "Item Added"})
+	}
 }
 
 func main() {
@@ -46,7 +66,9 @@ func main() {
 	if err != nil {
 		fmt.Println("error")
 	}
-	_, err = db.Exec(`CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT, password TEXT)`)
+	_, err = db.Exec("PRAGMA foreign_keys = ON")
+	_, err = db.Exec(`CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT, password TEXT, organization TEXT)`)
+	_, err = db.Exec(`CREATE TABLE IF NOT EXISTS products (id INTEGER PRIMARY KEY AUTOINCREMENT, producttype TEXT, descriptors TEXT, organization TEXT, FOREIGN KEY(organization)REFERENCES users(organization))`)
 	h := &Handler{DB: db}
 
 	// Login route
@@ -56,7 +78,12 @@ func main() {
 	// Restricted group
 	r := e.Group("")
 	r.Use(echojwt.WithConfig(config))
-	r.GET("/", h.restricted)
+	r.GET("/restricted", h.restricted)
+
+	i := r.Group("/inventory")
+	// i.POST("/add-inventory", h.addInvetoryTable)
+	i.POST("/add-item", h.addItem)
+	// i.GET("/yaks")
 
 	e.Logger.Fatal(e.Start(":1323"))
 }
