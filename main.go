@@ -67,8 +67,14 @@ func main() {
 		fmt.Println("error")
 	}
 	_, err = db.Exec("PRAGMA foreign_keys = ON")
-	_, err = db.Exec(`CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT, password TEXT, organization TEXT)`)
-	_, err = db.Exec(`CREATE TABLE IF NOT EXISTS products (id INTEGER PRIMARY KEY AUTOINCREMENT, producttype TEXT, descriptors TEXT, organization TEXT, FOREIGN KEY(organization)REFERENCES users(organization))`)
+	_, err = db.Exec(`CREATE TABLE IF NOT EXISTS organizations (id INTEGER PRIMARY KEY AUTOINCREMENT, orgname TEXT)`)
+	_, err = db.Exec(`CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT, password TEXT, orgid INTEGER, FOREIGN KEY(orgid)REFERENCES organizations(id))`)
+	_, err = db.Exec(`CREATE TABLE IF NOT EXISTS tablez (id INTEGER PRIMARY KEY AUTOINCREMENT, tablename TEXT, orgid INTEGER, FOREIGN KEY(orgid)REFERENCES organizations(id))`)
+	_, err = db.Exec(`CREATE TABLE IF NOT EXISTS product (id INTEGER PRIMARY KEY AUTOINCREMENT, productname TEXT)`)
+	_, err = db.Exec(`CREATE TABLE IF NOT EXISTS product_attribute (id INTEGER PRIMARY KEY AUTOINCREMENT, attributename TEXT)`)
+	_, err = db.Exec(`CREATE TABLE IF NOT EXISTS tableProducts (id INTEGER PRIMARY KEY AUTOINCREMENT, tableid INTEGER, productid INTEGER, FOREIGN KEY(tableid)REFERENCES tablez(id), FOREIGN KEY(productid)REFERENCES product(id))`)
+	_, err = db.Exec(`CREATE TABLE IF NOT EXISTS productAttributes (id INTEGER PRIMARY KEY AUTOINCREMENT, productid INTEGER, productattributeid INTEGER, FOREIGN KEY(productid)REFERENCES product(id), FOREIGN KEY(productattributeid)REFERENCES product_attribute(id))`)
+	fmt.Println(err)
 	h := &Handler{DB: db}
 
 	// Login route
