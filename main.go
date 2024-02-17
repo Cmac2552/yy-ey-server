@@ -29,6 +29,20 @@ type productType struct {
 	ProductName string `json:"productName"`
 }
 
+type productAttribute struct {
+	AttributeName string `json:"attributeName"`
+}
+
+type newProductAttribute struct {
+	ProductName   string `json:"productName"`
+	AttributeName string `json:"attributeName"`
+}
+
+type productAndProductAttribute struct {
+	ProductTypeId int
+	AttributeId   int
+}
+
 type Handler struct {
 	DB *sql.DB
 }
@@ -60,6 +74,50 @@ func (h *Handler) addProductType(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, echo.Map{"message": "Product Created"})
+}
+
+func (h *Handler) addProductAttribute(c echo.Context) error {
+	incomingProductAttribute := new(newProductAttribute)
+	c.Bind(incomingProductAttribute)
+	var existingAttribute productAttribute
+	err := h.DB.QueryRow("SELECT attributename FROM product_attribute WHERE attributename = ?", incomingProductAttribute.AttributeName).Scan(&existingAttribute.AttributeName)
+
+	if err == sql.ErrNoRows {
+		result, err := h.DB.Exec("INSERT INTO product_attribute (attributename) VALUES(?)", incomingProductAttribute.AttributeName)
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, echo.Map{"message": "Error Creating Product Attribute"})
+		}
+
+		productAttributeId, err := result.LastInsertId()
+
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, echo.Map{"message": "Error Getting Product Attribute ID"})
+		}
+
+		_, err = h.DB.Exec("INSERT INTO producttypeAttributes (producttypeid, productattributeid) VALUES((SELECT id FROM product_type WHERE productname = ?), ?)", incomingProductAttribute.ProductName, int(productAttributeId))
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, echo.Map{"message": "Error Creating Product Attribute Connection"})
+		}
+
+		return c.JSON(http.StatusOK, echo.Map{})
+	} else if err == nil {
+		var existingProductAndAttribute productAndProductAttribute
+		err = h.DB.QueryRow("SELECT * FROM producttypeAttributes WHERE producttypeid=(SELECT id FROM product_type WHERE productname = ?) AND productattributeid = (SELECT id FROM product_attribute WHERE attributename = ?)", incomingProductAttribute.ProductName, existingAttribute.AttributeName).Scan(&existingProductAndAttribute)
+		if err == sql.ErrNoRows {
+			_, err = h.DB.Exec("INSERT INTO producttypeAttributes (producttypeid, productattributeid) VALUES((SELECT id FROM product_type WHERE productname = ?), (SELECT id FROM product_attribute WHERE attributename = ?))", incomingProductAttribute.ProductName, existingAttribute.AttributeName)
+			if err != nil {
+				return c.JSON(http.StatusInternalServerError, echo.Map{"message": "Error Creating Product Attribute Connection"})
+			}
+
+			return c.JSON(http.StatusOK, echo.Map{})
+		} else {
+			return c.JSON(http.StatusInternalServerError, echo.Map{"message": "Error Fechting Attributes"})
+
+		}
+	} else {
+		return c.JSON(http.StatusInternalServerError, echo.Map{"message": "Fechting Attributes"})
+	}
+
 }
 
 func main() {
@@ -94,6 +152,8 @@ func main() {
 
 	i := r.Group("/inventory")
 	i.POST("/add-product-type", h.addProductType)
+	i.POST("/add-product-attribute", h.addProductAttribute)
+
 	// i.POST("/add-item", h.addItem)
 	// i.GET("/yaks")
 
