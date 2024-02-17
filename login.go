@@ -13,23 +13,27 @@ import (
 )
 
 type jwtCustomClaims struct {
-	Name         string `json:"name"`
-	Admin        bool   `json:"admin"`
-	Organization string `json:"organization"`
+	Name  string `json:"name"`
+	Admin bool   `json:"admin"`
+	OrgId int    `json:"organization"`
 	jwt.RegisteredClaims
 }
 
 func (h *Handler) signUp(c echo.Context) error {
-	u := new(user)
-	c.Bind(u)
+	s := new(signUpInfo)
+	c.Bind(s)
 	queryStatement := "SELECT username FROM users WHERE username = ?"
 	var returnUsername string
-	err := h.DB.QueryRow(queryStatement, u.Username).Scan(&returnUsername)
+	err := h.DB.QueryRow(queryStatement, s.Username).Scan(&returnUsername)
 
 	switch {
 	case err == sql.ErrNoRows:
-		bytes, err := bcrypt.GenerateFromPassword([]byte(u.Password), 14)
-		res, err := h.DB.Exec("INSERT INTO organizations (orgname) VALUES (?)", u.Organization)
+		bytes, err := bcrypt.GenerateFromPassword([]byte(s.Password), 14)
+		if err != nil {
+			fmt.Println(err)
+		}
+
+		res, err := h.DB.Exec("INSERT INTO organizations (orgname) VALUES (?)", s.OrgName)
 		if err != nil {
 			fmt.Println(err)
 		}
@@ -39,15 +43,15 @@ func (h *Handler) signUp(c echo.Context) error {
 			fmt.Println(err)
 		}
 
-		_, err = h.DB.Exec("INSERT INTO users (username, password, orgid) VALUES (?, ?, ?)", u.Username, string(bytes), lastInsertedId)
+		_, err = h.DB.Exec("INSERT INTO users (username, password, orgid) VALUES (?, ?, ?)", s.Username, string(bytes), lastInsertedId)
 		if err != nil {
 			fmt.Println(err)
 		}
 
 		claims := &jwtCustomClaims{
-			u.Username,
+			s.Username,
 			true,
-			u.Organization,
+			int(lastInsertedId),
 			jwt.RegisteredClaims{
 				ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour * 72)),
 			},
@@ -94,8 +98,8 @@ func (h *Handler) login(c echo.Context) error {
 		return c.JSON(http.StatusUnauthorized, echo.Map{"message": "Username and password do not match"})
 	}
 
-	queryStatement = "SELECT orgname FROM organizations WHERE id = ?"
-	err = h.DB.QueryRow(queryStatement, orgId).Scan(&returnUser.Organization)
+	queryStatement = "SELECT id FROM organizations WHERE id = ?"
+	err = h.DB.QueryRow(queryStatement, orgId).Scan(&returnUser.OrgId)
 	if err != nil {
 		fmt.Println(err)
 		return c.JSON(http.StatusInternalServerError, echo.Map{"message": "Database error"})
@@ -105,7 +109,7 @@ func (h *Handler) login(c echo.Context) error {
 	claims := &jwtCustomClaims{
 		returnUser.Username,
 		true,
-		returnUser.Organization,
+		returnUser.OrgId,
 		jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour * 72)),
 		},
@@ -113,7 +117,7 @@ func (h *Handler) login(c echo.Context) error {
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 
-	// Create my Own secrete
+	// Create my Own secret
 	t, err := token.SignedString([]byte(os.Getenv("JWT_SECRET")))
 	if err != nil {
 		return err

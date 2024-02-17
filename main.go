@@ -14,14 +14,19 @@ import (
 )
 
 type user struct {
-	Username     string `json:"username"`
-	Password     string `json:"password"`
-	Organization string `json:"organization"`
+	Username string `json:"username"`
+	Password string `json:"password"`
+	OrgId    int    `json:"organization"`
 }
 
-type Item struct {
-	ProductType string `json:"productType"`
-	Descriptors string `json:"descriptors"`
+type signUpInfo struct {
+	Username string `json:"username"`
+	Password string `json:"password"`
+	OrgName  string `json:"organization"`
+}
+
+type productType struct {
+	ProductName string `json:"productName"`
 }
 
 type Handler struct {
@@ -35,18 +40,26 @@ func (h *Handler) restricted(c echo.Context) error {
 	return c.String(http.StatusOK, "Welcome "+name+"!")
 }
 
-func (h *Handler) addItem(c echo.Context) error {
-	item := new(Item)
-	c.Bind(item)
-	userInfo := c.Get("user").(*jwt.Token).Claims.(*jwtCustomClaims)
-	fmt.Println(item.ProductType, item.Descriptors, userInfo.Organization)
-	_, err := h.DB.Exec("INSERT INTO products (producttype, descriptors, organization) VALUES (?, ?, ?)", item.ProductType, item.Descriptors, userInfo.Organization)
-	if err != nil {
-		fmt.Println(err)
-		return c.JSON(http.StatusInternalServerError, echo.Map{"messsage": "Item Insertion failed"})
-	} else {
-		return c.JSON(http.StatusOK, echo.Map{"message": "Item Added"})
+func (h *Handler) addProductType(c echo.Context) error {
+	p := new(productType)
+	c.Bind(p)
+	orgId := c.Get("user").(*jwt.Token).Claims.(*jwtCustomClaims).OrgId
+	var existingProductName string
+
+	err := h.DB.QueryRow("SELECT productname FROM product_type WHERE productname = ? AND orgid = ?", p.ProductName, orgId).Scan(&existingProductName)
+
+	if err != sql.ErrNoRows {
+		return c.JSON(http.StatusConflict, echo.Map{"message": "Product Already Exists"})
+	} else if err == nil {
+		return c.JSON(http.StatusInternalServerError, echo.Map{"message": "Database error"})
 	}
+
+	_, err = h.DB.Exec("INSERT INTO product_type (productname, orgid) VALUES(?, ?)", p.ProductName, orgId)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, echo.Map{"message": "Error Creating Product"})
+	}
+
+	return c.JSON(http.StatusOK, echo.Map{"message": "Product Created"})
 }
 
 func main() {
@@ -62,20 +75,13 @@ func main() {
 		},
 		SigningKey: []byte(os.Getenv("JWT_SECRET")),
 	}
+
 	db, err := sql.Open("sqlite", "./DB1.db")
 	if err != nil {
 		fmt.Println("error")
 	}
-	_, err = db.Exec("PRAGMA foreign_keys = ON")
-	_, err = db.Exec(`CREATE TABLE IF NOT EXISTS organizations (id INTEGER PRIMARY KEY AUTOINCREMENT, orgname TEXT)`)
-	_, err = db.Exec(`CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT, password TEXT, orgid INTEGER, FOREIGN KEY(orgid)REFERENCES organizations(id))`)
-	_, err = db.Exec(`CREATE TABLE IF NOT EXISTS tablez (id INTEGER PRIMARY KEY AUTOINCREMENT, tablename TEXT, orgid INTEGER, FOREIGN KEY(orgid)REFERENCES organizations(id))`)
-	_, err = db.Exec(`CREATE TABLE IF NOT EXISTS product (id INTEGER PRIMARY KEY AUTOINCREMENT, productname TEXT)`)
-	_, err = db.Exec(`CREATE TABLE IF NOT EXISTS product_attribute (id INTEGER PRIMARY KEY AUTOINCREMENT, attributename TEXT)`)
-	_, err = db.Exec(`CREATE TABLE IF NOT EXISTS tableProducts (id INTEGER PRIMARY KEY AUTOINCREMENT, tableid INTEGER, productid INTEGER, FOREIGN KEY(tableid)REFERENCES tablez(id), FOREIGN KEY(productid)REFERENCES product(id))`)
-	_, err = db.Exec(`CREATE TABLE IF NOT EXISTS productAttributes (id INTEGER PRIMARY KEY AUTOINCREMENT, productid INTEGER, productattributeid INTEGER, FOREIGN KEY(productid)REFERENCES product(id), FOREIGN KEY(productattributeid)REFERENCES product_attribute(id))`)
-	fmt.Println(err)
 	h := &Handler{DB: db}
+	h.databaseStartUp()
 
 	// Login route
 	e.POST("/login", h.login)
@@ -87,8 +93,8 @@ func main() {
 	r.GET("/restricted", h.restricted)
 
 	i := r.Group("/inventory")
-	// i.POST("/add-inventory", h.addInvetoryTable)
-	i.POST("/add-item", h.addItem)
+	i.POST("/add-product-type", h.addProductType)
+	// i.POST("/add-item", h.addItem)
 	// i.GET("/yaks")
 
 	e.Logger.Fatal(e.Start(":1323"))
