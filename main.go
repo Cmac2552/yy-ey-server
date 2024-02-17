@@ -43,6 +43,12 @@ type productAndProductAttribute struct {
 	AttributeId   int
 }
 
+type productAttributeValue struct {
+	AttributeValue string `json:"attributeValue"`
+	AttributeName  string `json:"attributeName"`
+	ProductName    string `json:"productName"`
+}
+
 type Handler struct {
 	DB *sql.DB
 }
@@ -52,72 +58,6 @@ func (h *Handler) restricted(c echo.Context) error {
 	claims := user.Claims.(*jwtCustomClaims)
 	name := claims.Name
 	return c.String(http.StatusOK, "Welcome "+name+"!")
-}
-
-func (h *Handler) addProductType(c echo.Context) error {
-	p := new(productType)
-	c.Bind(p)
-	orgId := c.Get("user").(*jwt.Token).Claims.(*jwtCustomClaims).OrgId
-	var existingProductName string
-
-	err := h.DB.QueryRow("SELECT productname FROM product_type WHERE productname = ? AND orgid = ?", p.ProductName, orgId).Scan(&existingProductName)
-
-	if err != sql.ErrNoRows {
-		return c.JSON(http.StatusConflict, echo.Map{"message": "Product Already Exists"})
-	} else if err == nil {
-		return c.JSON(http.StatusInternalServerError, echo.Map{"message": "Database error"})
-	}
-
-	_, err = h.DB.Exec("INSERT INTO product_type (productname, orgid) VALUES(?, ?)", p.ProductName, orgId)
-	if err != nil {
-		return c.JSON(http.StatusInternalServerError, echo.Map{"message": "Error Creating Product"})
-	}
-
-	return c.JSON(http.StatusOK, echo.Map{"message": "Product Created"})
-}
-
-func (h *Handler) addProductAttribute(c echo.Context) error {
-	incomingProductAttribute := new(newProductAttribute)
-	c.Bind(incomingProductAttribute)
-	var existingAttribute productAttribute
-	err := h.DB.QueryRow("SELECT attributename FROM product_attribute WHERE attributename = ?", incomingProductAttribute.AttributeName).Scan(&existingAttribute.AttributeName)
-
-	if err == sql.ErrNoRows {
-		result, err := h.DB.Exec("INSERT INTO product_attribute (attributename) VALUES(?)", incomingProductAttribute.AttributeName)
-		if err != nil {
-			return c.JSON(http.StatusInternalServerError, echo.Map{"message": "Error Creating Product Attribute"})
-		}
-
-		productAttributeId, err := result.LastInsertId()
-
-		if err != nil {
-			return c.JSON(http.StatusInternalServerError, echo.Map{"message": "Error Getting Product Attribute ID"})
-		}
-
-		_, err = h.DB.Exec("INSERT INTO producttypeAttributes (producttypeid, productattributeid) VALUES((SELECT id FROM product_type WHERE productname = ?), ?)", incomingProductAttribute.ProductName, int(productAttributeId))
-		if err != nil {
-			return c.JSON(http.StatusInternalServerError, echo.Map{"message": "Error Creating Product Attribute Connection"})
-		}
-
-		return c.JSON(http.StatusOK, echo.Map{})
-	} else if err == nil {
-		var existingProductAndAttribute productAndProductAttribute
-		err = h.DB.QueryRow("SELECT * FROM producttypeAttributes WHERE producttypeid=(SELECT id FROM product_type WHERE productname = ?) AND productattributeid = (SELECT id FROM product_attribute WHERE attributename = ?)", incomingProductAttribute.ProductName, existingAttribute.AttributeName).Scan(&existingProductAndAttribute)
-		if err == sql.ErrNoRows {
-			_, err = h.DB.Exec("INSERT INTO producttypeAttributes (producttypeid, productattributeid) VALUES((SELECT id FROM product_type WHERE productname = ?), (SELECT id FROM product_attribute WHERE attributename = ?))", incomingProductAttribute.ProductName, existingAttribute.AttributeName)
-			if err != nil {
-				return c.JSON(http.StatusInternalServerError, echo.Map{"message": "Error Creating Product Attribute Connection"})
-			}
-
-			return c.JSON(http.StatusOK, echo.Map{})
-		} else {
-			return c.JSON(http.StatusInternalServerError, echo.Map{"message": "Error Fechting Attributes"})
-
-		}
-	} else {
-		return c.JSON(http.StatusInternalServerError, echo.Map{"message": "Fechting Attributes"})
-	}
-
 }
 
 func main() {
@@ -150,12 +90,11 @@ func main() {
 	r.Use(echojwt.WithConfig(config))
 	r.GET("/restricted", h.restricted)
 
+	//inventory group
 	i := r.Group("/inventory")
 	i.POST("/add-product-type", h.addProductType)
 	i.POST("/add-product-attribute", h.addProductAttribute)
-
-	// i.POST("/add-item", h.addItem)
-	// i.GET("/yaks")
+	i.POST("/add-product-attribute-value", h.addProductAttributeValue)
 
 	e.Logger.Fatal(e.Start(":1323"))
 }
