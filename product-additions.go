@@ -9,12 +9,14 @@ import (
 )
 
 func (h *Handler) addProductType(c echo.Context) error {
-	p := new(productType)
-	c.Bind(p)
+	productType := new(struct {
+		ProductName string `json:"productName"`
+	})
+	c.Bind(productType)
 	orgId := c.Get("user").(*jwt.Token).Claims.(*jwtCustomClaims).OrgId
 	var count int
 
-	err := h.DB.QueryRow("SELECT COUNT(*) FROM product_type WHERE productname = ? AND orgid = ?", p.ProductName, orgId).Scan(&count)
+	err := h.DB.QueryRow("SELECT COUNT(*) FROM product_type WHERE productname = ? AND orgid = ?", productType.ProductName, orgId).Scan(&count)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, echo.Map{"message": "Database Error"})
 	}
@@ -23,7 +25,7 @@ func (h *Handler) addProductType(c echo.Context) error {
 		return c.JSON(http.StatusConflict, echo.Map{"message": "Product Already Exists"})
 	}
 
-	_, err = h.DB.Exec("INSERT INTO product_type (productname, orgid) VALUES(?, ?)", p.ProductName, orgId)
+	_, err = h.DB.Exec("INSERT INTO product_type (productname, orgid) VALUES(?, ?)", productType.ProductName, orgId)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, echo.Map{"message": "Error Creating Product"})
 	}
@@ -32,16 +34,19 @@ func (h *Handler) addProductType(c echo.Context) error {
 }
 
 func (h *Handler) addProductAttribute(c echo.Context) error {
-	incomingProductAttribute := new(newProductAttribute)
-	c.Bind(incomingProductAttribute)
+	productAttribute := new(struct {
+		ProductName   string `json:"productName"`
+		AttributeName string `json:"attributeName"`
+	})
+	c.Bind(productAttribute)
 	var existingCount int
-	err := h.DB.QueryRow("SELECT COUNT(*) FROM product_attribute WHERE attributename = ?", incomingProductAttribute.AttributeName).Scan(&existingCount)
+	err := h.DB.QueryRow("SELECT COUNT(*) FROM product_attribute WHERE attributename = ?", productAttribute.AttributeName).Scan(&existingCount)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, echo.Map{"message": "Error Fetcing Product Attributes"})
 	}
 
 	if existingCount < 1 {
-		result, err := h.DB.Exec("INSERT INTO product_attribute (attributename) VALUES(?)", incomingProductAttribute.AttributeName)
+		result, err := h.DB.Exec("INSERT INTO product_attribute (attributename) VALUES(?)", productAttribute.AttributeName)
 		if err != nil {
 			return c.JSON(http.StatusInternalServerError, echo.Map{"message": "Error Creating Product Attribute"})
 		}
@@ -52,7 +57,7 @@ func (h *Handler) addProductAttribute(c echo.Context) error {
 			return c.JSON(http.StatusInternalServerError, echo.Map{"message": "Error Getting Product Attribute ID"})
 		}
 
-		_, err = h.DB.Exec("INSERT INTO producttypeAttributes (producttypeid, productattributeid) VALUES((SELECT id FROM product_type WHERE productname = ?), ?)", incomingProductAttribute.ProductName, int(productAttributeId))
+		_, err = h.DB.Exec("INSERT INTO producttypeAttributes (producttypeid, productattributeid) VALUES((SELECT id FROM product_type WHERE productname = ?), ?)", productAttribute.ProductName, int(productAttributeId))
 		if err != nil {
 			return c.JSON(http.StatusInternalServerError, echo.Map{"message": "Error Creating Product Attribute Connection"})
 		}
@@ -62,12 +67,12 @@ func (h *Handler) addProductAttribute(c echo.Context) error {
 		var productTypeId int
 		var productAttributeId int
 		var count int
-		err := h.DB.QueryRow("SELECT id FROM product_type WHERE productname=?", incomingProductAttribute.ProductName).Scan(&productTypeId)
+		err := h.DB.QueryRow("SELECT id FROM product_type WHERE productname=?", productAttribute.ProductName).Scan(&productTypeId)
 		if err != nil {
 			return c.JSON(http.StatusInternalServerError, echo.Map{"message": "Error getting product id"})
 		}
 
-		err = h.DB.QueryRow("SELECT id FROM product_attribute WHERE attributename=?", incomingProductAttribute.AttributeName).Scan(&productAttributeId)
+		err = h.DB.QueryRow("SELECT id FROM product_attribute WHERE attributename=?", productAttribute.AttributeName).Scan(&productAttributeId)
 		if err != nil {
 			return c.JSON(http.StatusInternalServerError, echo.Map{"message": "Error getting attribute id"})
 		}
@@ -93,18 +98,22 @@ func (h *Handler) addProductAttribute(c echo.Context) error {
 }
 
 func (h *Handler) addProductAttributeValue(c echo.Context) error {
-	incomingProductAttributeValue := new(productAttributeValue)
-	c.Bind(incomingProductAttributeValue)
+	productAttributeValue := new(struct {
+		AttributeValue string `json:"attributeValue"`
+		AttributeName  string `json:"attributeName"`
+		ProductName    string `json:"productName"`
+	})
+	c.Bind(productAttributeValue)
 	var count int
 	var productTypeId int
 	var productAttributeId int
 
-	err := h.DB.QueryRow("SELECT id FROM product_type WHERE productname=?", incomingProductAttributeValue.ProductName).Scan(&productTypeId)
+	err := h.DB.QueryRow("SELECT id FROM product_type WHERE productname=?", productAttributeValue.ProductName).Scan(&productTypeId)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, echo.Map{"message": "Error getting product id"})
 	}
 
-	err = h.DB.QueryRow("SELECT id FROM product_attribute WHERE attributename=?", incomingProductAttributeValue.AttributeName).Scan(&productAttributeId)
+	err = h.DB.QueryRow("SELECT id FROM product_attribute WHERE attributename=?", productAttributeValue.AttributeName).Scan(&productAttributeId)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, echo.Map{"message": "Error getting attribute id"})
 	}
@@ -118,7 +127,7 @@ func (h *Handler) addProductAttributeValue(c echo.Context) error {
 		return c.JSON(http.StatusConflict, echo.Map{"message": "Product Already Exists"})
 	}
 
-	_, err = h.DB.Exec("INSERT INTO products (producttypeid, productattributeid, attributevalue) VALUES(?, ?, ?)", productTypeId, productAttributeId, incomingProductAttributeValue.AttributeValue)
+	_, err = h.DB.Exec("INSERT INTO products (producttypeid, productattributeid, attributevalue) VALUES(?, ?, ?)", productTypeId, productAttributeId, productAttributeValue.AttributeValue)
 	if err != nil {
 		fmt.Println(err)
 		return c.JSON(http.StatusInternalServerError, echo.Map{"message": "Error adding Attribute value"})

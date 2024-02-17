@@ -19,6 +19,12 @@ type jwtCustomClaims struct {
 	jwt.RegisteredClaims
 }
 
+type signUpInfo struct {
+	Username string `json:"username"`
+	Password string `json:"password"`
+	OrgName  string `json:"organization"`
+}
+
 func (h *Handler) signUp(c echo.Context) error {
 	s := new(signUpInfo)
 	c.Bind(s)

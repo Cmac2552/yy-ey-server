@@ -19,36 +19,6 @@ type user struct {
 	OrgId    int    `json:"organization"`
 }
 
-type signUpInfo struct {
-	Username string `json:"username"`
-	Password string `json:"password"`
-	OrgName  string `json:"organization"`
-}
-
-type productType struct {
-	ProductName string `json:"productName"`
-}
-
-type productAttribute struct {
-	AttributeName string `json:"attributeName"`
-}
-
-type newProductAttribute struct {
-	ProductName   string `json:"productName"`
-	AttributeName string `json:"attributeName"`
-}
-
-type productAndProductAttribute struct {
-	ProductTypeId int
-	AttributeId   int
-}
-
-type productAttributeValue struct {
-	AttributeValue string `json:"attributeValue"`
-	AttributeName  string `json:"attributeName"`
-	ProductName    string `json:"productName"`
-}
-
 type Handler struct {
 	DB *sql.DB
 }
