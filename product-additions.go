@@ -1,7 +1,7 @@
 package main
 
 import (
-	"fmt"
+	"log"
 	"net/http"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -18,6 +18,7 @@ func (h *Handler) addProductType(c echo.Context) error {
 
 	err := h.DB.QueryRow("SELECT COUNT(*) FROM product_type WHERE productname = ? AND orgid = ?", productType.ProductName, orgId).Scan(&count)
 	if err != nil {
+		log.Println(err)
 		return c.JSON(http.StatusInternalServerError, echo.Map{"message": "Database Error"})
 	}
 
@@ -27,6 +28,7 @@ func (h *Handler) addProductType(c echo.Context) error {
 
 	_, err = h.DB.Exec("INSERT INTO product_type (productname, orgid) VALUES(?, ?)", productType.ProductName, orgId)
 	if err != nil {
+		log.Println(err)
 		return c.JSON(http.StatusInternalServerError, echo.Map{"message": "Error Creating Product"})
 	}
 
@@ -42,23 +44,27 @@ func (h *Handler) addProductAttribute(c echo.Context) error {
 	var existingCount int
 	err := h.DB.QueryRow("SELECT COUNT(*) FROM product_attribute WHERE attributename = ?", productAttribute.AttributeName).Scan(&existingCount)
 	if err != nil {
+		log.Println(err)
 		return c.JSON(http.StatusInternalServerError, echo.Map{"message": "Error Fetcing Product Attributes"})
 	}
 
 	if existingCount < 1 {
 		result, err := h.DB.Exec("INSERT INTO product_attribute (attributename) VALUES(?)", productAttribute.AttributeName)
 		if err != nil {
+			log.Println(err)
 			return c.JSON(http.StatusInternalServerError, echo.Map{"message": "Error Creating Product Attribute"})
 		}
 
 		productAttributeId, err := result.LastInsertId()
 
 		if err != nil {
+			log.Println(err)
 			return c.JSON(http.StatusInternalServerError, echo.Map{"message": "Error Getting Product Attribute ID"})
 		}
 
 		_, err = h.DB.Exec("INSERT INTO producttypeAttributes (producttypeid, productattributeid) VALUES((SELECT id FROM product_type WHERE productname = ?), ?)", productAttribute.ProductName, int(productAttributeId))
 		if err != nil {
+			log.Println(err)
 			return c.JSON(http.StatusInternalServerError, echo.Map{"message": "Error Creating Product Attribute Connection"})
 		}
 
@@ -69,22 +75,26 @@ func (h *Handler) addProductAttribute(c echo.Context) error {
 		var count int
 		err := h.DB.QueryRow("SELECT id FROM product_type WHERE productname=?", productAttribute.ProductName).Scan(&productTypeId)
 		if err != nil {
+			log.Println(err)
 			return c.JSON(http.StatusInternalServerError, echo.Map{"message": "Error getting product id"})
 		}
 
 		err = h.DB.QueryRow("SELECT id FROM product_attribute WHERE attributename=?", productAttribute.AttributeName).Scan(&productAttributeId)
 		if err != nil {
+			log.Println(err)
 			return c.JSON(http.StatusInternalServerError, echo.Map{"message": "Error getting attribute id"})
 		}
 
 		err = h.DB.QueryRow("SELECT COUNT (*) FROM producttypeAttributes WHERE producttypeid=? AND productattributeid = ?", productTypeId, productAttributeId).Scan(&count)
 		if err != nil {
+			log.Println(err)
 			return c.JSON(http.StatusInternalServerError, echo.Map{"message": "Error checking if this attribute exists on this product"})
 		}
 
 		if count < 1 {
 			_, err = h.DB.Exec("INSERT INTO producttypeAttributes (producttypeid, productattributeid) VALUES(?, ?)", productTypeId, productAttributeId)
 			if err != nil {
+				log.Println(err)
 				return c.JSON(http.StatusInternalServerError, echo.Map{"message": "Error Creating Product Attribute Connection"})
 			}
 
@@ -110,16 +120,19 @@ func (h *Handler) addProductAttributeValue(c echo.Context) error {
 
 	err := h.DB.QueryRow("SELECT id FROM product_type WHERE productname=?", productAttributeValue.ProductName).Scan(&productTypeId)
 	if err != nil {
+		log.Println(err)
 		return c.JSON(http.StatusInternalServerError, echo.Map{"message": "Error getting product id"})
 	}
 
 	err = h.DB.QueryRow("SELECT id FROM product_attribute WHERE attributename=?", productAttributeValue.AttributeName).Scan(&productAttributeId)
 	if err != nil {
+		log.Println(err)
 		return c.JSON(http.StatusInternalServerError, echo.Map{"message": "Error getting attribute id"})
 	}
 
 	err = h.DB.QueryRow("SELECT COUNT(*) FROM products WHERE producttypeid=? AND productattributeid = ?", productTypeId, productAttributeId).Scan(&count)
 	if err != nil {
+		log.Println(err)
 		return c.JSON(http.StatusInternalServerError, echo.Map{"message": "Error checking if attribute has value"})
 	}
 
@@ -129,7 +142,7 @@ func (h *Handler) addProductAttributeValue(c echo.Context) error {
 
 	_, err = h.DB.Exec("INSERT INTO products (producttypeid, productattributeid, attributevalue) VALUES(?, ?, ?)", productTypeId, productAttributeId, productAttributeValue.AttributeValue)
 	if err != nil {
-		fmt.Println(err)
+		log.Println(err)
 		return c.JSON(http.StatusInternalServerError, echo.Map{"message": "Error adding Attribute value"})
 	}
 	return c.JSON(http.StatusOK, echo.Map{"message": "Attribute Value Addition Successful"})

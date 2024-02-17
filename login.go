@@ -3,6 +3,7 @@ package main
 import (
 	"database/sql"
 	"fmt"
+	"log"
 	"net/http"
 	"os"
 	"time"
@@ -36,22 +37,26 @@ func (h *Handler) signUp(c echo.Context) error {
 	case err == sql.ErrNoRows:
 		bytes, err := bcrypt.GenerateFromPassword([]byte(s.Password), 14)
 		if err != nil {
-			fmt.Println(err)
+			log.Println(err)
+			c.JSON(http.StatusInternalServerError, echo.Map{"messsage": "Password Encryption failed"})
 		}
 
 		res, err := h.DB.Exec("INSERT INTO organizations (orgname) VALUES (?)", s.OrgName)
 		if err != nil {
-			fmt.Println(err)
+			log.Println(err)
+			c.JSON(http.StatusInternalServerError, echo.Map{"messsage": "Organization creation failed"})
 		}
 
 		lastInsertedId, err := res.LastInsertId()
 		if err != nil {
-			fmt.Println(err)
+			log.Println(err)
+			c.JSON(http.StatusInternalServerError, echo.Map{"messsage": "Organization id creation failed"})
 		}
 
 		_, err = h.DB.Exec("INSERT INTO users (username, password, orgid) VALUES (?, ?, ?)", s.Username, string(bytes), lastInsertedId)
 		if err != nil {
-			fmt.Println(err)
+			log.Println(err)
+			c.JSON(http.StatusInternalServerError, echo.Map{"messsage": "User Creation Failed"})
 		}
 
 		claims := &jwtCustomClaims{
@@ -93,7 +98,7 @@ func (h *Handler) login(c echo.Context) error {
 
 	err := h.DB.QueryRow(queryStatement, u.Username).Scan(&returnUser.Username, &returnUser.Password, &orgId)
 	if err != nil {
-		fmt.Println(err)
+		log.Println(err)
 		return c.JSON(http.StatusInternalServerError, echo.Map{"message": "Database error"})
 	}
 	passwordMatch := bcrypt.CompareHashAndPassword([]byte(returnUser.Password), []byte(u.Password))
@@ -107,7 +112,7 @@ func (h *Handler) login(c echo.Context) error {
 	queryStatement = "SELECT id FROM organizations WHERE id = ?"
 	err = h.DB.QueryRow(queryStatement, orgId).Scan(&returnUser.OrgId)
 	if err != nil {
-		fmt.Println(err)
+		log.Println(err)
 		return c.JSON(http.StatusInternalServerError, echo.Map{"message": "Database error"})
 	}
 
@@ -126,6 +131,7 @@ func (h *Handler) login(c echo.Context) error {
 	// Create my Own secret
 	t, err := token.SignedString([]byte(os.Getenv("JWT_SECRET")))
 	if err != nil {
+		log.Println(err)
 		return err
 	}
 
