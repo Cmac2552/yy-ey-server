@@ -29,7 +29,17 @@ func (h *Handler) signUp(c echo.Context) error {
 	switch {
 	case err == sql.ErrNoRows:
 		bytes, err := bcrypt.GenerateFromPassword([]byte(u.Password), 14)
-		_, err = h.DB.Exec("INSERT INTO users (username, password, organization) VALUES (?, ?, ?)", u.Username, string(bytes), u.Organization)
+		res, err := h.DB.Exec("INSERT INTO organizations (orgname) VALUES (?)", u.Organization)
+		if err != nil {
+			fmt.Println(err)
+		}
+
+		lastInsertedId, err := res.LastInsertId()
+		if err != nil {
+			fmt.Println(err)
+		}
+
+		_, err = h.DB.Exec("INSERT INTO users (username, password, orgid) VALUES (?, ?, ?)", u.Username, string(bytes), lastInsertedId)
 		if err != nil {
 			fmt.Println(err)
 		}
@@ -67,10 +77,11 @@ func (h *Handler) login(c echo.Context) error {
 	u := new(user)
 	c.Bind(u)
 
-	queryStatement := "SELECT username, password, organization FROM users WHERE username = ?"
+	queryStatement := "SELECT username, password, orgid FROM users WHERE username = ?"
 	var returnUser user
+	var orgId int
 
-	err := h.DB.QueryRow(queryStatement, u.Username).Scan(&returnUser.Username, &returnUser.Password, &returnUser.Organization)
+	err := h.DB.QueryRow(queryStatement, u.Username).Scan(&returnUser.Username, &returnUser.Password, &orgId)
 	if err != nil {
 		fmt.Println(err)
 		return c.JSON(http.StatusInternalServerError, echo.Map{"message": "Database error"})
@@ -81,6 +92,13 @@ func (h *Handler) login(c echo.Context) error {
 		return c.JSON(http.StatusUnauthorized, echo.Map{"message": "User does not exists"})
 	} else if u.Username != returnUser.Username || passwordMatch != nil {
 		return c.JSON(http.StatusUnauthorized, echo.Map{"message": "Username and password do not match"})
+	}
+
+	queryStatement = "SELECT orgname FROM organizations WHERE id = ?"
+	err = h.DB.QueryRow(queryStatement, orgId).Scan(&returnUser.Organization)
+	if err != nil {
+		fmt.Println(err)
+		return c.JSON(http.StatusInternalServerError, echo.Map{"message": "Database error"})
 	}
 
 	//DUPLICATE CODE
