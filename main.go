@@ -46,7 +46,7 @@ func main() {
 
 	db, err := sql.Open("sqlite", "./DB1.db")
 	if err != nil {
-		fmt.Println("error")
+		fmt.Println(err)
 	}
 	h := &Handler{DB: db}
 	h.databaseStartUp()
@@ -65,6 +65,9 @@ func main() {
 	i.POST("/add-product-type", h.addProductType)
 	i.POST("/add-product-attribute", h.addProductAttribute)
 	i.POST("/add-product-attribute-value", h.addProductAttributeValue)
+	i.POST("/product", h.addProduct)
+	i.GET("/products-attribute-names", h.getProductAttributeNames)
+	i.GET("/products", h.getProducts)
 
 	e.Logger.Fatal(e.Start(":1323"))
 }
