@@ -38,25 +38,29 @@ func (h *Handler) getProducts(c echo.Context) error {
 	productType := new(productTypeBody)
 	c.Bind(productType)
 
-	result, err := h.DB.Query("SELECT product_attribute.attributename,  products.attributevalue FROM product_type JOIN products ON product_type.id = products.producttypeid JOIN product_attribute ON product_attribute.id = products.productattributeid WHERE product_type.productname = ?",
-		productType.ProductTypeName)
+	attributes, err := h.DB.Query("SELECT productnumber, attributevalue, product_attribute.attributename from product_attribute_values JOIN product_attribute ON product_attribute_values.productattributeid = product_attribute.id where producttypeid=(SELECT id FROM product_type WHERE productname=?) ", productType.ProductTypeName)
 	if err != nil {
 		log.Println(err)
-		return c.JSON(http.StatusInternalServerError, echo.Map{"message": "Database Error"})
+		return c.JSON(http.StatusInternalServerError, echo.Map{"message": "Error Reading Rows From DB"})
 	}
 
-	attributeValues := make([]productValue, 0)
+	products := make(map[int]map[string]string)
 
-	for result.Next() {
-		var attributeValue productValue
-		err = result.Scan(&attributeValue)
-		defer result.Close()
-		if err != nil {
-			log.Println(err)
-			return c.JSON(http.StatusInternalServerError, echo.Map{"message": "Error Reading Rows From DB"})
+	for attributes.Next() {
+		var productNumber int
+		var attributeValue string
+		var attributeName string
+		attributes.Scan(&productNumber, &attributeValue, &attributeName)
+		if products[productNumber] == nil {
+			products[productNumber] = make(map[string]string)
 		}
-		attributeValues = append(attributeValues, attributeValue)
-
+		products[productNumber][attributeName] = attributeValue
 	}
-	return c.JSON(http.StatusOK, echo.Map{"products": attributeValues})
+
+	flat := make([]map[string]string, 0)
+	for _, value := range products {
+		flat = append(flat, value)
+	}
+
+	return c.JSON(http.StatusOK, echo.Map{"products": flat})
 }
