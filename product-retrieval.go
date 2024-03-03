@@ -35,10 +35,9 @@ func (h *Handler) getProductAttributeNames(c echo.Context) error {
 }
 
 func (h *Handler) getProducts(c echo.Context) error {
-	productType := new(productTypeBody)
-	c.Bind(productType)
+	productType := c.Param("productTypeName")
 
-	attributes, err := h.DB.Query("SELECT productnumber, attributevalue, product_attribute.attributename from product_attribute_values JOIN product_attribute ON product_attribute_values.productattributeid = product_attribute.id where producttypeid=(SELECT id FROM product_type WHERE productname=?) ", productType.ProductTypeName)
+	attributes, err := h.DB.Query("SELECT productnumber, attributevalue, product_attribute.attributename from product_attribute_values JOIN product_attribute ON product_attribute_values.productattributeid = product_attribute.id where producttypeid=(SELECT id FROM product_type WHERE productname=?) ", productType)
 	if err != nil {
 		log.Println(err)
 		return c.JSON(http.StatusInternalServerError, echo.Map{"message": "Error Reading Rows From DB"})

@@ -67,7 +67,7 @@ func main() {
 	i.POST("/add-product-attribute-value", h.addProductAttributeValue)
 	i.POST("/product", h.addProduct)
 	i.GET("/products-attribute-names", h.getProductAttributeNames)
-	i.GET("/products", h.getProducts)
+	i.GET("/products/:productTypeName", h.getProducts)
 
 	e.Logger.Fatal(e.Start(":1323"))
 }
