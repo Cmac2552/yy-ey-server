@@ -68,6 +68,7 @@ func main() {
 	i.POST("/product", h.addProduct)
 	i.POST("/product-and-attributes", h.addProductTypeAndAttributeTypes)
 	i.POST("/product-and-attribute-values", h.addProductAndAttributeValues)
+	i.PATCH("/product-and-attribute-values", h.updateProductAttributeValues)
 	i.GET("/products-attribute-names", h.getProductAttributeNames)
 	i.GET("/products/:productTypeName", h.getProducts)
 

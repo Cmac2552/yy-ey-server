@@ -18,3 +18,9 @@ type productTypeAndAttributeValues struct {
 	ProductTypeName string            `json:"productTypeName"`
 	AttrValues      map[string]string `json:"attrValues"`
 }
+
+type productTypeAndNumberWithAttributeValues struct {
+	ProductTypeName string            `json:"productTypeName"`
+	ProductNumber   int               `json:"productNumber"`
+	AttrValues      map[string]string `json:"attrValues"`
+}

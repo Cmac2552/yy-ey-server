@@ -153,3 +153,44 @@ func (h *Handler) addProductAction(productTypeName string) (int, string, int) {
 
 	return http.StatusOK, "Product Addition Successful", productNumber
 }
+
+func (h *Handler) updateProductAction(productNumber int, productName string, attributeName string, attributeValue string) (int, string) {
+	var count int
+	var productTypeId int
+	var productAttributeId int
+
+	err := h.DB.QueryRow("SELECT COUNT(*) FROM products WHERE productnumber = ?", productNumber).Scan(&count)
+	if count < 0 || err != nil {
+		log.Println(err)
+		return http.StatusInternalServerError, "No Product With that number"
+	}
+
+	err = h.DB.QueryRow("SELECT id FROM product_type WHERE productname=?", productName).Scan(&productTypeId)
+	if err != nil {
+		log.Println(err)
+		return http.StatusInternalServerError, "Error getting product id"
+	}
+
+	err = h.DB.QueryRow("SELECT id FROM product_attribute WHERE attributename=?", attributeName).Scan(&productAttributeId)
+	if err != nil {
+		log.Println(err)
+		return http.StatusInternalServerError, "Error getting attribute id"
+	}
+
+	err = h.DB.QueryRow("SELECT COUNT(*) FROM product_attribute_values WHERE producttypeid=? AND productattributeid = ? AND productnumber = ? ", productTypeId, productAttributeId, productNumber).Scan(&count)
+	if err != nil {
+		log.Println(err)
+		return http.StatusInternalServerError, "Error checking if attribute has value"
+	}
+
+	if count < 0 {
+		return http.StatusConflict, "Attribute does not exist on that Product"
+	}
+
+	_, err = h.DB.Exec("UPDATE product_attribute_values SET attributevalue=? WHERE producttypeid=? AND productnumber=? AND productattributeid=?", attributeValue, productTypeId, productNumber, productAttributeId)
+	if err != nil {
+		log.Println(err)
+		return http.StatusInternalServerError, "Error adding Attribute value"
+	}
+	return http.StatusOK, "Attribute Value Update Successful"
+}

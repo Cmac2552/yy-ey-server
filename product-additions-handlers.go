@@ -34,7 +34,13 @@ func (h *Handler) addProductAttributeValue(c echo.Context) error {
 		ProductNumber  int    `json:"productNumber"`
 	})
 	c.Bind(productAttributeValue)
-	httpCode, httpMessage := h.addProductAttributeValueAction(productAttributeValue.ProductNumber, productAttributeValue.ProductName, productAttributeValue.AttributeName, productAttributeValue.AttributeValue)
+
+	httpCode, httpMessage := h.addProductAttributeValueAction(
+		productAttributeValue.ProductNumber,
+		productAttributeValue.ProductName,
+		productAttributeValue.AttributeName,
+		productAttributeValue.AttributeValue)
+
 	return c.JSON(httpCode, echo.Map{"message": httpMessage})
 }
 
@@ -50,6 +56,7 @@ func (h *Handler) addProductTypeAndAttributeTypes(c echo.Context) error {
 	productTypeAndAttributes := new(productTypeAndAttributes)
 	c.Bind(productTypeAndAttributes)
 	orgId := c.Get("user").(*jwt.Token).Claims.(*jwtCustomClaims).OrgId
+
 	httpCode, httpMessage := h.addProductTypeAction(orgId, productTypeAndAttributes.ProductTypeName)
 	if httpCode != 200 {
 		return c.JSON(httpCode, echo.Map{"message": httpMessage})
@@ -61,13 +68,14 @@ func (h *Handler) addProductTypeAndAttributeTypes(c echo.Context) error {
 			return c.JSON(httpCode, echo.Map{"message": httpMessage})
 		}
 	}
+
 	return c.JSON(http.StatusOK, echo.Map{"message": "Product Type Created"})
 }
 
-// TODO
 func (h *Handler) addProductAndAttributeValues(c echo.Context) error {
 	productTypeAndAttributeValues := new(productTypeAndAttributeValues)
 	c.Bind(productTypeAndAttributeValues)
+
 	httpCode, httpMessage, productNumber := h.addProductAction(productTypeAndAttributeValues.ProductTypeName)
 	if httpCode != 200 {
 		return c.JSON(httpCode, echo.Map{"message": httpMessage})
@@ -83,7 +91,16 @@ func (h *Handler) addProductAndAttributeValues(c echo.Context) error {
 	return c.JSON(http.StatusOK, echo.Map{"message": "Product and Attribute Values Created"})
 }
 
-//TODO
-// func (h *Handler) editProductAttributeValues(c echo.Context) error {
+// TODO
+func (h *Handler) updateProductAttributeValues(c echo.Context) error {
+	productTypeAndNumberWithAttributeValues := new(productTypeAndNumberWithAttributeValues)
+	c.Bind(productTypeAndNumberWithAttributeValues)
 
-// }
+	for attrName, attrValue := range productTypeAndNumberWithAttributeValues.AttrValues {
+		httpCode, httpMessage := h.updateProductAction(productTypeAndNumberWithAttributeValues.ProductNumber, productTypeAndNumberWithAttributeValues.ProductTypeName, attrName, attrValue)
+		if httpCode != 200 {
+			return c.JSON(httpCode, echo.Map{"message": httpMessage})
+		}
+	}
+	return c.JSON(http.StatusOK, echo.Map{"message": "Product Attribute Value Updated"})
+}
