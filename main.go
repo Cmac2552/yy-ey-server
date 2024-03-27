@@ -69,7 +69,7 @@ func main() {
 	i.POST("/product-and-attributes", h.addProductTypeAndAttributeTypes)
 	i.POST("/product-and-attribute-values", h.addProductAndAttributeValues)
 	i.PATCH("/product-and-attribute-values", h.updateProductAttributeValues)
-	i.GET("/products-attribute-names", h.getProductAttributeNames)
+	i.GET("/products-attribute-names/:productTypeName", h.getProductAttributeNames)
 	i.GET("/products/:productTypeName", h.getProducts)
 
 	e.Logger.Fatal(e.Start(":1323"))

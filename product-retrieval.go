@@ -8,11 +8,10 @@ import (
 )
 
 func (h *Handler) getProductAttributeNames(c echo.Context) error {
-	productType := new(productTypeBody)
-	c.Bind(productType)
+	productTypeName := c.Param("productTypeName")
 
 	result, err := h.DB.Query("SELECT product_attribute.attributename FROM product_type JOIN producttypeAttributes ON product_type.id = producttypeAttributes.producttypeid JOIN product_attribute ON product_attribute.id = producttypeAttributes.productattributeid WHERE product_type.productname = ?",
-		productType.ProductTypeName)
+		productTypeName)
 	if err != nil {
 		log.Println(err)
 		return c.JSON(http.StatusInternalServerError, echo.Map{"message": "Database Error"})
