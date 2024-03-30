@@ -91,7 +91,6 @@ func (h *Handler) addProductAndAttributeValues(c echo.Context) error {
 	return c.JSON(http.StatusOK, echo.Map{"message": "Product and Attribute Values Created"})
 }
 
-// TODO
 func (h *Handler) updateProductAttributeValues(c echo.Context) error {
 	productTypeAndNumberWithAttributeValues := new(productTypeAndNumberWithAttributeValues)
 	c.Bind(productTypeAndNumberWithAttributeValues)
