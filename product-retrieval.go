@@ -1,8 +1,11 @@
 package main
 
 import (
+	"cmp"
 	"log"
 	"net/http"
+	"slices"
+	"strconv"
 
 	"github.com/labstack/echo/v4"
 )
@@ -56,9 +59,23 @@ func (h *Handler) getProducts(c echo.Context) error {
 	}
 
 	flat := make([]map[string]string, 0)
-	for _, value := range products {
+	//THIS DONT WORK
+	for key, value := range products {
+		value["productNumber"] = strconv.Itoa(key)
 		flat = append(flat, value)
 	}
+
+	slices.SortFunc(flat, func(i, j map[string]string) int {
+		productNumber1, err := strconv.Atoi(i["productNumber"])
+		if err != nil {
+			log.Println(err)
+		}
+		productNumber2, err := strconv.Atoi(j["productNumber"])
+		if err != nil {
+			log.Println(err)
+		}
+		return cmp.Compare(productNumber1, productNumber2)
+	})
 
 	return c.JSON(http.StatusOK, echo.Map{"products": flat})
 }
