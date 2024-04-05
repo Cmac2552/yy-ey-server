@@ -59,7 +59,6 @@ func (h *Handler) getProducts(c echo.Context) error {
 	}
 
 	flat := make([]map[string]string, 0)
-	//THIS DONT WORK
 	for key, value := range products {
 		value["productNumber"] = strconv.Itoa(key)
 		flat = append(flat, value)
