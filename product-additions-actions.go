@@ -183,8 +183,8 @@ func (h *Handler) updateProductAction(productNumber int, productName string, att
 		return http.StatusInternalServerError, "Error checking if attribute has value"
 	}
 
-	if count < 0 {
-		return http.StatusConflict, "Attribute does not exist on that Product"
+	if count < 1 {
+		return h.addProductAttributeValueAction(productNumber, productName, attributeName, attributeValue)
 	}
 
 	_, err = h.DB.Exec("UPDATE product_attribute_values SET attributevalue=? WHERE producttypeid=? AND productnumber=? AND productattributeid=?", attributeValue, productTypeId, productNumber, productAttributeId)
