@@ -71,6 +71,7 @@ func main() {
 	i.PATCH("/product-and-attribute-values", h.updateProductAttributeValues)
 	i.GET("/products-attribute-names/:productTypeName", h.getProductAttributeNames)
 	i.GET("/products/:productTypeName", h.getProducts)
+	i.GET("/productNames", h.getProductNames)
 
 	e.Logger.Fatal(e.Start(":1323"))
 }

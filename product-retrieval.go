@@ -7,6 +7,7 @@ import (
 	"slices"
 	"strconv"
 
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/labstack/echo/v4"
 )
 
@@ -77,4 +78,30 @@ func (h *Handler) getProducts(c echo.Context) error {
 	})
 
 	return c.JSON(http.StatusOK, echo.Map{"products": flat})
+}
+
+func (h *Handler) getProductNames(c echo.Context) error {
+	orgId := c.Get("user").(*jwt.Token).Claims.(*jwtCustomClaims).OrgId
+
+	result, err := h.DB.Query("SELECT productname FROM product_type WHERE orgid=?",
+		orgId)
+	if err != nil {
+		log.Println(err)
+		return c.JSON(http.StatusInternalServerError, echo.Map{"message": "Database Error"})
+	}
+
+	productNames := make([]string, 0)
+
+	for result.Next() {
+		var productName string
+		err = result.Scan(&productName)
+		defer result.Close()
+		if err != nil {
+			log.Println(err)
+			return c.JSON(http.StatusInternalServerError, echo.Map{"message": "Error Reading Rows From DB"})
+		}
+		productNames = append(productNames, productName)
+
+	}
+	return c.JSON(http.StatusOK, echo.Map{"productNames": productNames})
 }
