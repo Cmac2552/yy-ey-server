@@ -17,7 +17,7 @@ func (h *Handler) addProductType(c echo.Context) error {
 
 func (h *Handler) addProductAttribute(c echo.Context) error {
 	productAttribute := new(struct {
-		ProductName   string `json:"productName"`
+		ProductName   string `json:"productTypeName"`
 		AttributeName string `json:"attributeName"`
 	})
 	c.Bind(productAttribute)
