@@ -72,6 +72,7 @@ func main() {
 	i.GET("/products-attribute-names/:productTypeName", h.getProductAttributeNames)
 	i.GET("/products/:productTypeName", h.getProducts)
 	i.GET("/productNames", h.getProductNames)
+	i.DELETE("/product/:productTypeName/:productNumber", h.deleteProduct)
 
 	e.Logger.Fatal(e.Start(":1323"))
 }
