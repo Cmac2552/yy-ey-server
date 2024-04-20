@@ -37,6 +37,7 @@ func main() {
 	// Middleware
 	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
+	e.Use(middleware.CORS())
 	config := echojwt.Config{
 		NewClaimsFunc: func(c echo.Context) jwt.Claims {
 			return new(jwtCustomClaims)
@@ -54,6 +55,9 @@ func main() {
 	// Login route
 	e.POST("/login", h.login)
 	e.POST("/sign-up", h.signUp)
+	e.OPTIONS("inventory/product/:productTypeName/:productNumber", func(c echo.Context) error {
+		return c.String(http.StatusOK, "ok")
+	})
 
 	// Restricted group
 	r := e.Group("")

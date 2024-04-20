@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"net/http"
 	"strconv"
@@ -20,8 +19,6 @@ func (h *Handler) deleteProduct(c echo.Context) error {
 		log.Println(err)
 		return c.JSON(http.StatusInternalServerError, echo.Map{"message": "Bad Integer Conversion"})
 	}
-
-	fmt.Println(productTypeName, productNumber)
 
 	err = h.DB.QueryRow("SELECT id FROM product_type WHERE productname=?", productTypeName).Scan(&productTypeId)
 	if err != nil {
