@@ -149,7 +149,7 @@ func (h *Handler) addProductAction(productTypeName string) (int, string, int) {
 	}
 
 	var productNumber int
-	h.DB.QueryRow("SELECT id FROM products WHERE producttypeid = ? ORDER BY productnumber DESC LIMIT 1", &productTypeId).Scan(&productNumber)
+	h.DB.QueryRow("SELECT productNumber FROM products WHERE producttypeid = ? ORDER BY productnumber DESC LIMIT 1", &productTypeId).Scan(&productNumber)
 
 	return http.StatusOK, "Product Addition Successful", productNumber
 }

@@ -13,6 +13,7 @@ import (
 
 func (h *Handler) getProductAttributeNames(c echo.Context) error {
 	productTypeName := c.Param("productTypeName")
+	h.lock.Lock()
 
 	result, err := h.DB.Query("SELECT product_attribute.attributename FROM product_type JOIN producttypeAttributes ON product_type.id = producttypeAttributes.producttypeid JOIN product_attribute ON product_attribute.id = producttypeAttributes.productattributeid WHERE product_type.productname = ?",
 		productTypeName)
@@ -20,6 +21,7 @@ func (h *Handler) getProductAttributeNames(c echo.Context) error {
 		log.Println(err)
 		return c.JSON(http.StatusInternalServerError, echo.Map{"message": "Database Error"})
 	}
+	h.lock.Unlock()
 
 	attributeNames := make([]string, 0)
 
@@ -38,14 +40,16 @@ func (h *Handler) getProductAttributeNames(c echo.Context) error {
 }
 
 func (h *Handler) getProducts(c echo.Context) error {
+
 	productType := c.Param("productTypeName")
 
+	h.lock.Lock()
 	attributes, err := h.DB.Query("SELECT productnumber, attributevalue, product_attribute.attributename from product_attribute_values JOIN product_attribute ON product_attribute_values.productattributeid = product_attribute.id where producttypeid=(SELECT id FROM product_type WHERE productname=?) ORDER BY productnumber ", productType)
 	if err != nil {
 		log.Println(err)
 		return c.JSON(http.StatusInternalServerError, echo.Map{"message": "Error Reading Rows From DB"})
 	}
-
+	h.lock.Unlock()
 	products := make(map[int]map[string]string)
 
 	for attributes.Next() {
@@ -81,14 +85,16 @@ func (h *Handler) getProducts(c echo.Context) error {
 }
 
 func (h *Handler) getProductNames(c echo.Context) error {
-	orgId := c.Get("user").(*jwt.Token).Claims.(*jwtCustomClaims).OrgId
 
+	orgId := c.Get("user").(*jwt.Token).Claims.(*jwtCustomClaims).OrgId
+	h.lock.Lock()
 	result, err := h.DB.Query("SELECT productname FROM product_type WHERE orgid=?",
 		orgId)
 	if err != nil {
 		log.Println(err)
 		return c.JSON(http.StatusInternalServerError, echo.Map{"message": "Database Error"})
 	}
+	h.lock.Unlock()
 
 	productNames := make([]string, 0)
 

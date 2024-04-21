@@ -11,6 +11,8 @@ func (h *Handler) addProductType(c echo.Context) error {
 	productType := new(productTypeBody)
 	c.Bind(productType)
 	orgId := c.Get("user").(*jwt.Token).Claims.(*jwtCustomClaims).OrgId
+	h.lock.Lock()
+	defer h.lock.Unlock()
 	httpCode, httpMessage := h.addProductTypeAction(orgId, productType.ProductTypeName)
 	return c.JSON(httpCode, echo.Map{"message": httpMessage})
 }
@@ -21,6 +23,8 @@ func (h *Handler) addProductAttribute(c echo.Context) error {
 		AttributeName string `json:"attributeName"`
 	})
 	c.Bind(productAttribute)
+	h.lock.Lock()
+	defer h.lock.Unlock()
 	httpCode, httpMessage := h.addProductAttributeAction(productAttribute.ProductName, productAttribute.AttributeName)
 	return c.JSON(httpCode, echo.Map{"message": httpMessage})
 
@@ -34,6 +38,8 @@ func (h *Handler) addProductAttributeValue(c echo.Context) error {
 		ProductNumber  int    `json:"productNumber"`
 	})
 	c.Bind(productAttributeValue)
+	h.lock.Lock()
+	defer h.lock.Unlock()
 
 	httpCode, httpMessage := h.addProductAttributeValueAction(
 		productAttributeValue.ProductNumber,
@@ -47,6 +53,8 @@ func (h *Handler) addProductAttributeValue(c echo.Context) error {
 func (h *Handler) addProduct(c echo.Context) error {
 	productType := new(productTypeBody)
 	c.Bind(productType)
+	h.lock.Lock()
+	defer h.lock.Unlock()
 	httpCode, httpMessage, _ := h.addProductAction(productType.ProductTypeName)
 	return c.JSON(httpCode, echo.Map{"message": httpMessage})
 
@@ -56,6 +64,8 @@ func (h *Handler) addProductTypeAndAttributeTypes(c echo.Context) error {
 	productTypeAndAttributes := new(productTypeAndAttributes)
 	c.Bind(productTypeAndAttributes)
 	orgId := c.Get("user").(*jwt.Token).Claims.(*jwtCustomClaims).OrgId
+	h.lock.Lock()
+	defer h.lock.Unlock()
 
 	httpCode, httpMessage := h.addProductTypeAction(orgId, productTypeAndAttributes.ProductTypeName)
 	if httpCode != 200 {
@@ -75,6 +85,8 @@ func (h *Handler) addProductTypeAndAttributeTypes(c echo.Context) error {
 func (h *Handler) addProductAndAttributeValues(c echo.Context) error {
 	productTypeAndAttributeValues := new(productTypeAndAttributeValues)
 	c.Bind(productTypeAndAttributeValues)
+	h.lock.Lock()
+	defer h.lock.Unlock()
 
 	httpCode, httpMessage, productNumber := h.addProductAction(productTypeAndAttributeValues.ProductTypeName)
 	if httpCode != 200 {
@@ -94,6 +106,8 @@ func (h *Handler) addProductAndAttributeValues(c echo.Context) error {
 func (h *Handler) updateProductAttributeValues(c echo.Context) error {
 	productTypeAndNumberWithAttributeValues := new(productTypeAndNumberWithAttributeValues)
 	c.Bind(productTypeAndNumberWithAttributeValues)
+	h.lock.Lock()
+	defer h.lock.Unlock()
 
 	for attrName, attrValue := range productTypeAndNumberWithAttributeValues.AttrValues {
 		httpCode, httpMessage := h.updateProductAction(productTypeAndNumberWithAttributeValues.ProductNumber, productTypeAndNumberWithAttributeValues.ProductTypeName, attrName, attrValue)

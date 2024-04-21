@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"sync"
 
 	"github.com/golang-jwt/jwt/v5"
 	echojwt "github.com/labstack/echo-jwt/v4"
@@ -20,7 +21,8 @@ type user struct {
 }
 
 type Handler struct {
-	DB *sql.DB
+	DB   *sql.DB
+	lock sync.Mutex
 }
 
 func (h *Handler) restricted(c echo.Context) error {
@@ -49,7 +51,7 @@ func main() {
 	if err != nil {
 		fmt.Println(err)
 	}
-	h := &Handler{DB: db}
+	h := &Handler{DB: db, lock: sync.Mutex{}}
 	h.databaseStartUp()
 
 	// Login route
@@ -75,7 +77,7 @@ func main() {
 	i.PATCH("/product-and-attribute-values", h.updateProductAttributeValues)
 	i.GET("/products-attribute-names/:productTypeName", h.getProductAttributeNames)
 	i.GET("/products/:productTypeName", h.getProducts)
-	i.GET("/productNames", h.getProductNames)
+	i.GET("/product-names", h.getProductNames)
 	i.DELETE("/product/:productTypeName/:productNumber", h.deleteProduct)
 
 	e.Logger.Fatal(e.Start(":1323"))

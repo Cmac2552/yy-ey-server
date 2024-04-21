@@ -39,7 +39,7 @@ func (h *Handler) databaseStartUp() {
 		fmt.Println("Database Startup step 7 Failed")
 	}
 
-	_, err = h.DB.Exec(`CREATE TABLE IF NOT EXISTS product_attribute_values (id INTEGER PRIMARY KEY AUTOINCREMENT, productnumber INTEGER REFERENCES products(id), producttypeid INTEGER REFERENCES product_type(id),  productattributeid INTEGER REFERENCES product_attribute(id), attributevalue TEXT)`)
+	_, err = h.DB.Exec(`CREATE TABLE IF NOT EXISTS product_attribute_values (id INTEGER PRIMARY KEY AUTOINCREMENT, productnumber INTEGER , producttypeid INTEGER REFERENCES product_type(id),  productattributeid INTEGER REFERENCES product_attribute(id), attributevalue TEXT)`)
 	if err != nil {
 		fmt.Println("Database Startup step 8 Failed")
 	}
