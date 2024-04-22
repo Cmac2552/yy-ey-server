@@ -136,19 +136,35 @@ func (h *Handler) addProductAttributeValueAction(productNumber int, productName 
 
 func (h *Handler) addProductAction(productTypeName string) (int, string, int) {
 	var productTypeId int
+	var existingCount int
+	var productNumber int
 
 	err := h.DB.QueryRow("SELECT id FROM product_type WHERE productname=?", productTypeName).Scan(&productTypeId)
 	if err != nil {
 		log.Println(err)
 		return http.StatusInternalServerError, "Error getting product id", 0
 	}
-	_, err = h.DB.Exec("INSERT INTO products (productnumber, producttypeid) VALUES((SELECT productnumber FROM products WHERE producttypeid = ? ORDER BY productnumber DESC LIMIT 1 )+1, ?)", productTypeId, productTypeId)
+
+	err = h.DB.QueryRow("SELECT Count(*) FROM products WHERE producttypeid=?", productTypeId).Scan(&existingCount)
 	if err != nil {
 		log.Println(err)
-		return http.StatusInternalServerError, "Error Creating Product", 0
+		return http.StatusInternalServerError, "Error getting product id", 0
 	}
 
-	var productNumber int
+	if existingCount == 0 {
+		_, err = h.DB.Exec("INSERT INTO products (productnumber, producttypeid) VALUES(1, ?)", productTypeId)
+		if err != nil {
+			log.Println(err)
+			return http.StatusInternalServerError, "Error Creating Product", 0
+		}
+	} else {
+		_, err = h.DB.Exec("INSERT INTO products (productnumber, producttypeid) VALUES((SELECT productnumber FROM products WHERE producttypeid = ? ORDER BY productnumber DESC LIMIT 1 )+1, ?)", productTypeId, productTypeId)
+		if err != nil {
+			log.Println(err)
+			return http.StatusInternalServerError, "Error Creating Product", 0
+		}
+	}
+
 	h.DB.QueryRow("SELECT productNumber FROM products WHERE producttypeid = ? ORDER BY productnumber DESC LIMIT 1", &productTypeId).Scan(&productNumber)
 
 	return http.StatusOK, "Product Addition Successful", productNumber
