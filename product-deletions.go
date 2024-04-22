@@ -19,6 +19,8 @@ func (h *Handler) deleteProduct(c echo.Context) error {
 		log.Println(err)
 		return c.JSON(http.StatusInternalServerError, echo.Map{"message": "Bad Integer Conversion"})
 	}
+	h.lock.Lock()
+	defer h.lock.Unlock()
 
 	err = h.DB.QueryRow("SELECT id FROM product_type WHERE productname=?", productTypeName).Scan(&productTypeId)
 	if err != nil {
