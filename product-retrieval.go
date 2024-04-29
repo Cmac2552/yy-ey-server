@@ -84,6 +84,72 @@ func (h *Handler) getProducts(c echo.Context) error {
 	return c.JSON(http.StatusOK, echo.Map{"products": flat})
 }
 
+func (h *Handler) getFilteredProducts(c echo.Context) error {
+	productType := c.Param("productTypeName")
+
+	//create part of query to be inserted
+	//should be post request
+
+	h.lock.Lock()
+	productNumbers, err := h.DB.Query("SELECT productnumber from product_attribute_values JOIN product_attribute ON product_attribute_values.productattributeid = product_attribute.id where producttypeid=(SELECT id FROM product_type WHERE productname=?)"+" GROUP BY productnumber ", productType)
+	if err != nil {
+		log.Println(err)
+		return c.JSON(http.StatusInternalServerError, echo.Map{"message": "Error Reading Rows From DB"})
+	}
+	h.lock.Unlock()
+	productNumberQuery := ""
+	for productNumbers.Next() {
+
+		var productNumber int
+		productNumbers.Scan(&productNumber)
+
+		productNumberQuery = productNumberQuery + "OR productnumber=" + strconv.Itoa(productNumber)
+	}
+
+	if productNumberQuery != "" {
+		productNumberQuery = productNumberQuery[3:]
+	}
+
+	attributes, err := h.DB.Query("SELECT productnumber, attributevalue, product_attribute.attributename from product_attribute_values JOIN product_attribute ON product_attribute_values.productattributeid = product_attribute.id where producttypeid=(SELECT id FROM product_type WHERE productname=?) AND("+productNumberQuery+") ORDER BY productnumber ", productType)
+	if err != nil {
+		log.Println(err)
+		return c.JSON(http.StatusInternalServerError, echo.Map{"message": "Error Reading Rows From DB"})
+	}
+	h.lock.Unlock()
+	products := make(map[int]map[string]string)
+
+	for attributes.Next() {
+		var productNumber int
+		var attributeValue string
+		var attributeName string
+		attributes.Scan(&productNumber, &attributeValue, &attributeName)
+		if products[productNumber] == nil {
+			products[productNumber] = make(map[string]string)
+		}
+		products[productNumber][attributeName] = attributeValue
+	}
+
+	flat := make([]map[string]string, 0)
+	for key, value := range products {
+		value["productNumber"] = strconv.Itoa(key)
+		flat = append(flat, value)
+	}
+
+	slices.SortFunc(flat, func(i, j map[string]string) int {
+		productNumber1, err := strconv.Atoi(i["productNumber"])
+		if err != nil {
+			log.Println(err)
+		}
+		productNumber2, err := strconv.Atoi(j["productNumber"])
+		if err != nil {
+			log.Println(err)
+		}
+		return cmp.Compare(productNumber1, productNumber2)
+	})
+
+	return c.JSON(http.StatusOK, echo.Map{"products": flat})
+}
+
 func (h *Handler) getProductNames(c echo.Context) error {
 
 	orgId := c.Get("user").(*jwt.Token).Claims.(*jwtCustomClaims).OrgId
