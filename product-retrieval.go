@@ -203,5 +203,5 @@ func (h *Handler) getProductFilters(c echo.Context) error {
 		}
 	}
 
-	return c.JSON(http.StatusOK, echo.Map{"products": productFilters})
+	return c.JSON(http.StatusOK, productFilters)
 }

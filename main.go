@@ -77,7 +77,7 @@ func main() {
 	i.PATCH("/product-and-attribute-values", h.updateProductAttributeValues)
 	i.GET("/products-attribute-names/:productTypeName", h.getProductAttributeNames)
 	i.GET("/products/:productTypeName", h.getProducts)
-	i.GET("/products-filters/:productTypeName", h.getProductFilters)
+	i.GET("/product-filters/:productTypeName", h.getProductFilters)
 	i.GET("/product-names", h.getProductNames)
 	i.DELETE("/product/:productTypeName/:productNumber", h.deleteProduct)
 
