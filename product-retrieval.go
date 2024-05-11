@@ -177,3 +177,31 @@ func (h *Handler) getProductNames(c echo.Context) error {
 	}
 	return c.JSON(http.StatusOK, echo.Map{"productNames": productNames})
 }
+
+func (h *Handler) getProductFilters(c echo.Context) error {
+
+	productType := c.Param("productTypeName")
+
+	h.lock.Lock()
+	attributes, err := h.DB.Query("SELECT attributevalue, product_attribute.attributename from product_attribute_values JOIN product_attribute ON product_attribute_values.productattributeid = product_attribute.id where producttypeid=(SELECT id FROM product_type WHERE productname=?) GROUP BY attributevalue", productType)
+	if err != nil {
+		log.Println(err)
+		return c.JSON(http.StatusInternalServerError, echo.Map{"message": "Error Reading Rows From DB"})
+	}
+	h.lock.Unlock()
+	productFilters := make(map[string][]string)
+
+	for attributes.Next() {
+		var attributeValue string
+		var attributeName string
+		attributes.Scan(&attributeValue, &attributeName)
+		if productFilters[attributeName] == nil {
+			productFilters[attributeName] = make([]string, 1)
+			productFilters[attributeName][0] = attributeValue
+		} else {
+			productFilters[attributeName] = append(productFilters[attributeName], attributeValue)
+		}
+	}
+
+	return c.JSON(http.StatusOK, echo.Map{"products": productFilters})
+}
