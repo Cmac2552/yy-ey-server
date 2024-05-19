@@ -55,8 +55,8 @@ func (h *Handler) addProduct(c echo.Context) error {
 	c.Bind(productType)
 	h.lock.Lock()
 	defer h.lock.Unlock()
-	httpCode, httpMessage, _ := h.addProductAction(productType.ProductTypeName)
-	return c.JSON(httpCode, echo.Map{"message": httpMessage})
+	httpCode, httpMessage, productNumber := h.addProductAction(productType.ProductTypeName)
+	return c.JSON(httpCode, echo.Map{"message": httpMessage, "productNumber": productNumber})
 
 }
 
@@ -100,7 +100,7 @@ func (h *Handler) addProductAndAttributeValues(c echo.Context) error {
 		}
 	}
 
-	return c.JSON(http.StatusOK, echo.Map{"message": "Product and Attribute Values Created"})
+	return c.JSON(http.StatusOK, echo.Map{"message": "Product and Attribute Values Created", "productNumber": productNumber})
 }
 
 func (h *Handler) updateProductAttributeValues(c echo.Context) error {
